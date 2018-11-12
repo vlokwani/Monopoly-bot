@@ -1,5 +1,5 @@
 import random as rand
-
+import copy
 
 
 class State(object):
@@ -33,12 +33,14 @@ class State(object):
         }
         
 
-    def generate_state(self):
+    def generate_state(self, *args, **kwargs):
         """ 
             generate a state with random plausible values.
             Ideally this function will have to be called before every test case is executed.
         """
-        return self.state
+        state, new_state = copy.deepcopy(self.state), copy.deepcopy(self.state)
+        # stub for transforming the state according to our needs
+        return state, new_state
 
 
 class TestAdjudicator(object): 

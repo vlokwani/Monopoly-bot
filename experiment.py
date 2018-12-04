@@ -1,3 +1,7 @@
+import sys, os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname('__file__'), 'Monopoly')))
+
 from adjudicator import Adjudicator
 from Agent import AgentOne
 from Agent2 import AgentTwo

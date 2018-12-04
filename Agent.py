@@ -7,10 +7,27 @@ PHASE_NUMBER_INDEX = 4
 PHASE_PAYLOAD_INDEX = 5
 DEBT_INDEX = 6
 
+state_indexes = [
+    PLAYER_TURN_INDEX,
+    PROPERTY_STATUS_INDEX,
+    PLAYER_POSITION_INDEX,
+    PLAYER_CASH_INDEX,
+    PHASE_NUMBER_INDEX,
+#    PHASE_PAYLOAD_INDEX,
+    DEBT_INDEX
+]
+
+headers = "PLAYER,PLAYER_TURN,PROPERTY_STATUS,PLAYER_POSITION,PLAYER_CASH,PHASE_NUMBER,DEBT"
+
+def write_headers():
+    with open('train.tsv', 'w') as f:
+        f.write("\t".join(headers.split(',')))
+        f.write("\n")
 
 class AgentOne:
     def __init__(self, id):
         self.id = id
+        write_headers()
 
     def getBSMTDecision(self, state):
         return False
@@ -28,5 +45,8 @@ class AgentOne:
         return "R",
 
     def receiveState(self, state):
-        with open('agent1.log', 'a') as f:
-            f.write(str(state) + "\n")
+        with open('train.tsv', 'a') as f:
+            f.write(str(self.id) + "\t")
+            for index in state_indexes:
+                f.write(str(state[index]) + "\t")
+            f.write("\n")

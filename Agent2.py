@@ -8,6 +8,16 @@ PHASE_PAYLOAD_INDEX = 5
 DEBT_INDEX = 6
 
 
+state_indexes = [
+    PLAYER_TURN_INDEX,
+    PROPERTY_STATUS_INDEX,
+    PLAYER_POSITION_INDEX,
+    PLAYER_CASH_INDEX,
+    PHASE_NUMBER_INDEX,
+#    PHASE_PAYLOAD_INDEX,
+    DEBT_INDEX
+]
+
 class AgentTwo:
     def __init__(self, id):
         self.id = id
@@ -28,5 +38,8 @@ class AgentTwo:
         return "R",
 
     def receiveState(self, state):
-        with open('agent2.log', 'a') as f:
-            f.write(str(state) + "\n") 
+        with open('train.tsv', 'a') as f:
+            f.write(str(self.id) + "\t")
+            for index in state_indexes:
+                f.write(str(state[index]) + "\t")
+            f.write("\n")

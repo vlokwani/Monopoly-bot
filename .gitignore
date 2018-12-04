@@ -1,3 +1,7 @@
 *.pyc
 .DS_Store
 monopoly.log
+agent1.log
+agent2.log
+.idea/
+*.log

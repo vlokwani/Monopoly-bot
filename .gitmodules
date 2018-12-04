@@ -1,0 +1,3 @@
+[submodule "Monopoly"]
+	path = Monopoly
+	url = git@github.com:SanjayThomas/Monopoly.git

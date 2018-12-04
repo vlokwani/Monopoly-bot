@@ -1,4 +1,3 @@
-from adjudicator import Adjudicator
 
 PLAYER_TURN_INDEX = 0
 PROPERTY_STATUS_INDEX = 1
@@ -13,20 +12,20 @@ class AgentTwo:
     def __init__(self, id):
         self.id = id
 
-	def getBMSTDecision(self, state):
-		return False	
-	
-    def respondTrade(self, state):
-		return False
-	
-    def buyProperty(self, state):
-		return True
-	
-    def auctionProperty(self, state):
-		return 0
+    def getBSMTDecision(self, state):
+        return False
 
-	def jailDecision(self, state):
-		return "R",
+    def respondTrade(self, state):
+        return False
+
+    def buyProperty(self, state):
+        return True
+
+    def auctionProperty(self, state):
+        return 0
+
+    def jailDecision(self, state):
+        return "R",
 
     def receiveState(self, state):
         with open('agent2.log', 'a') as f:

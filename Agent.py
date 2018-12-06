@@ -1,3 +1,4 @@
+from constants import board
 
 PLAYER_TURN_INDEX = 0
 PROPERTY_STATUS_INDEX = 1
@@ -17,6 +18,10 @@ state_indexes = [
     DEBT_INDEX
 ]
 
+street_sets = [[1,3], [6,8,9], [11,13,14], [16,18,19], [21,23,24], [26,27,29], [31,32,34], [37,39]]
+railroad_set = [5, 15,25,35]
+utility_set = [12,28]
+
 headers = "PLAYER,PLAYER_TURN,PROPERTY_STATUS,PLAYER_POSITION,PLAYER_CASH,PHASE_NUMBER,DEBT"
 
 def write_headers():
@@ -33,7 +38,22 @@ class AgentOne:
         return False
 
     def respondTrade(self, state):
-        return False
+        cash_offer = state[5][1]
+        property_offer = state[5][2]
+        cash_request = state[5][3]
+        property_request = state[5][4]
+        net_offer = cash_offer
+        for i in property_offer:
+            net_offer += self.property_value_hisProperty(i, state)
+        net_request = cash_request
+        for i in property_request:
+            net_request += self.property_value_myProperty(i, state)
+        if(net_offer < net_request):
+            return False
+        threshold_cash = self.calculate_threshold_cash_futue(state) + 100
+        if(cash_request > threshold_cash):
+            return False
+        return True
 
     def buyProperty(self, state):
         return True
@@ -43,6 +63,170 @@ class AgentOne:
 
     def jailDecision(self, state):
         return "R",
+
+    #look ahead 2-12 locations and return the max money I might have to spend
+    def calculate_threshold_cash_futue(self, state):
+        if(self.id == 1):
+            currentPos = state[PLAYER_POSITION_INDEX][0]
+        else:
+            currentPos = state[PLAYER_POSITION_INDEX][1]
+        maxMoney = 0
+        for j in range(2,13):
+            i = j + currentPos
+            money = 0
+            if((state[PROPERTY_STATUS_INDEX][i] <0 and self.id==1) or (state[PROPERTY_STATUS_INDEX][i] >0 and self.id==2)):
+                #its his property
+                if(board[i]["class"]=="Street"):
+                    status = state[PROPERTY_STATUS_INDEX][i]
+                    if(status == 1 or status == -1):
+                        money = board[i]["rent"]
+                    elif(status == 2 or status == -2):
+                        money = board[i]["rent_house_1"]
+                    elif(status == 3 or status == -3):
+                        money = board[i]["rent_house_2"]
+                    elif(status == 4 or status == -4):
+                        money = board[i]["rent_house_3"]
+                    elif(status == 5 or status == -5):
+                        money = board[i]["rent_house_4"]
+                    elif(status == 6 or status == -6):
+                        money = board[i]["rent_hotel"]
+                elif(board[i]["class"]=="Utility"):
+                    countUtility = 1
+                    for k in utility_set:
+                        if(k!=i):
+                            if((state[PROPERTY_STATUS_INDEX][k] <0 and self.id==1) or (state[PROPERTY_STATUS_INDEX][k] >0 and self.id==2)):
+                                countUtility++;
+                    if(countUtility == 1):
+                        money = 12*4 #max dice roll
+                    else:
+                        money = 12*10
+                elif(board[i]["class"]=="Railroad"):
+                    countRail = 1
+                    for k in railroad_set:
+                        if(k!=i):
+                            if((state[PROPERTY_STATUS_INDEX][k] <0 and self.id==1) or (state[PROPERTY_STATUS_INDEX][k] >0 and self.id==2)):
+                                countRail++;
+                    money = 25*countRail
+                else:
+                    money = 200
+            if(money > maxMoney):
+                maxMoney = money
+        return maxMoney
+
+
+
+    #return property's value if I have it now and the other agent might get in future.
+    def property_value_myProperty(self, propertyIndex, state):
+        #find if it's their first/second/third property after trade
+        their_count = 1
+        pClass = board[propertyIndex]["class"]
+        if(pClass=="Street"):
+            for list in street_sets:
+                if(propertyIndex in list):
+                    for i in list:
+                        if(i!=propertyIndex):
+                            if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 1):
+                                their_count+=1
+                            elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 2):
+                                their_count+=1
+        elif(pClass=="Railroad"):
+            for item in railroad_set:
+                if(item != propertyIndex):
+                    if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 1):
+                        their_count+=1
+                    elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 2):
+                        their_count+=1
+        elif(pClass=="Utility"):
+            for item in utility_set:
+                if(item != propertyIndex):
+                    if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 1):
+                        their_count+=1
+                    elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 2):
+                        their_count+=1
+        value = self.property_value(propertyIndex, their_count)
+        finalValue = value + self.property_discount(propertyIndex, their_count, value)
+        return finalValue
+
+    #return property's value if other agent has it and I am getting it.
+    def property_value_hisProperty(self, propertyIndex, state):
+        #find if it's my first/second/third property after trade
+        my_count = 1
+        pClass = board[propertyIndex]["class"]
+        if(pClass=="Street"):
+            for list in street_sets:
+                if(propertyIndex in list):
+                    for i in list:
+                        if(i!=propertyIndex):
+                            if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 2):
+                                my_count+=1
+                            elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 1):
+                                my_count+=1
+        elif(pClass=="Railroad"):
+            for item in railroad_set:
+                if(item != propertyIndex):
+                    if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 2):
+                        my_count+=1
+                    elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 1):
+                        my_count+=1
+        elif(pClass=="Utility"):
+            for item in utility_set:
+                if(item != propertyIndex):
+                    if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 2):
+                        my_count+=1
+                    elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 1):
+                        my_count+=1
+        value = self.property_value(propertyIndex, my_count)
+        finalValue = value + self.property_discount(propertyIndex, my_count, value)
+        return finalValue
+
+    def property_discount(self, propertyIndex, count, value):
+        pClass = board[propertyIndex]["class"]
+        pColor = board[propertyIndex]["monopoly"]
+        #Opponent can or would be able to build houses after the deal
+        if(pClass=="Street" and count==2 and (pColor=="Dark Blue" or pColor=="Light Blue")):
+            return value*0.3
+        elif(pClass=="Street" and count==3):
+            return value*0.3
+        else
+            return 0
+
+    def property_value(self, propertyIndex, count):
+        pColor = board[propertyIndex]["monopoly"]
+        pClass = board[propertyIndex]["class"]
+        if(count==1 and pClass=="Railroad"):
+            return 200
+        elif(count==1 and pClass=="Utility"):
+            return 150
+        elif(count==1 and pClass=="Street"):
+            return board[propertyIndex]["price"]
+        elif(count==2 and pClass=="Railroad"):
+            return 400
+        elif(count==2 and pClass=="Utility"):
+            return 300
+        elif(count==2 and pClass=="Street"):
+            if(pColor=="Light Blue"):
+                return (board[propertyIndex]["price"]*2) + 150
+            else:
+                return board[propertyIndex]["price"]*2
+        elif(count==3 and pClass=="Railroad"):
+            return 600
+        elif(count==3 and pClass=="Street"):
+            if(pColor=="Brown"):
+                return (board[propertyIndex]["price"]*3) + 200
+            elif(pColor=="Light Blue"):
+                return (board[propertyIndex]["price"]*3) + 300
+            elif(pColor=="Pink"):
+                return (board[propertyIndex]["price"]*3) + 150
+            elif(pColor=="Orange"):
+                return (board[propertyIndex]["price"]*3) + 250
+            elif(pColor=="Red" or pColor=="Yellow"):
+                return (board[propertyIndex]["price"]*3) + 100
+            elif(pColor=="Green"):
+                return (board[propertyIndex]["price"]*3) - 50
+        elif(count==4 and pClass=="Railroad"):
+            return 800
+        else:
+            return -1
 
     def receiveState(self, state):
         with open('train.tsv', 'a') as f:

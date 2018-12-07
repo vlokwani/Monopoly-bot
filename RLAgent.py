@@ -9,7 +9,7 @@ import numpy as np
 import time
 from constants import board
 
-rl_state_size = 41
+rl_state_size = 76
 bsize = 256
 batch_size_var = 128000
 epoc_count = 10
@@ -67,15 +67,27 @@ class AgentTwo:
 
     def buyProperty(self, state):
 #        global buy_false, buy_true
-#        state = getRLState(state)
+#        rl_state = getRLState(state)
+#        value = state[PLAYER_CASH_INDEX][self.id-1] - board[PLAYER_POSITION_INDEX[self.id-1]]["build_cost"]
+#        if value[self.id-1] < 0:
+#            rl_state[0,22*(self.id-1)] = 1
+#            for i in range(20):
+#                rl_state[0,22*(self.id-1)+i+1] = 0
+#        elif value[self.id-1] >= 20*50:
+#            rl_state[0,22*(self.id-1)+21] = 1
+#        else for i in range(20):
+#            if value[self.id-1] >= i*50 and val[self.id-1] < (i+1)*50:
+#                rl_state[0, 22*(self.id-1)+i+1] = 1
+#            else rl_state[0, 22*(self.id-1)+i+1] = 0
+#        
 #        if self.prev_state is not None:
-#            self.trainData(,,,)
-#        self.prev_state = state
+#            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice)
+#        self.prev_state = rl_state
 #        global epsilon
 #        if random.random() < epsilon:
 #            NNout = random.randint(0,1)
 #        else:
-#            NNout = np.argmax(buy_nn.predict(state))
+#            NNout = np.argmax(buy_nn.predict(rl_state))
 #        self.prev_choice = NNout
 #        if NNout == 1:
 #            buy_true += 1
@@ -85,7 +97,18 @@ class AgentTwo:
 #            return False
 
     def auctionProperty(self, state):
-        return 0
+        rl_state = getRLState(state)
+        if self.prev_state is not None:
+            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice)
+        self.prev_state = rl_state
+        global epsilon
+        if random.random() < epsilon:
+            property_pos = state[PLAYER_POSITION_INDEX]
+            NNout = random.randint(0,board[property_pos]["price"]+1)
+        else:
+            NNout = np.argmax(buy_nn.predict(state))
+        self.prev_choice = NNout
+        return NNout
 
     def jailDecision(self, state):
         return "R",
@@ -116,7 +139,7 @@ class AgentTwo:
         count = [0,0]
         value = [0,0]
         rl_state = np.zeros((1,rl_state_size))
-        value[self.id-1] = state[PLAYER_CASH_INDEX][self.id-1] - board[PLAYER_POSITION_INDEX[self.id-1]]["build_cost"]
+        value[self.id-1] = state[PLAYER_CASH_INDEX][self.id-1]
         value[2-self.id] = state[PLAYER_CASH_INDEX][2-self.id]
         for i in range(20):
             if value[self.id-1] >= i*50 and val[self.id-1] < (i+1)*50:

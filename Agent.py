@@ -1,5 +1,15 @@
 from constants import board
 
+# DONE: mortgage_property_to_buy -- CHECK IF ANY PROPERTIES CAN BE MORTGAGED AND RETURN A LIST FOR BUYING A NEW PROPERTY
+    # # we don't have enough cash
+    # check if property is worth buying.
+    # in the priority queue, are there any properties that have lower value
+    # than the property we wish to buy, mortgage those to reach the 
+    # threshold state.
+    # owned_properties = self.get_my_properties(state[PROPERTY_STATUS_INDEX])
+    # curr_prop_value = self.get_property_value(position)
+
+
 PLAYER_TURN_INDEX = 0
 PROPERTY_STATUS_INDEX = 1
 PLAYER_POSITION_INDEX = 2
@@ -23,6 +33,7 @@ street_sets = [[1,3], [6,8,9], [11,13,14], [16,18,19], [21,23,24], [26,27,29], [
 railroad_set = [5, 15,25,35]
 utility_set = [12,28]
 
+property_priority_queue = []
 headers = "PLAYER,PLAYER_TURN,PROPERTY_STATUS,PLAYER_POSITION,PLAYER_CASH,PHASE_NUMBER,DEBT"
 
 def write_headers():
@@ -30,10 +41,18 @@ def write_headers():
         f.write("\t".join(headers.split(',')))
         f.write("\n")
 
+def getMortgagePrice(price):
+    return price/2
+
 class AgentOne:
     def __init__(self, id):
         self.id = id
         write_headers()
+        self.buyable_properties = []
+        for i in range(40):
+            if board[i]['class'] in ['Street', 'Railroad', 'Utility']:
+                self.buyable_properties.append(i)
+        self.initialize()
 
     def initialize(self):
         for i in range(0,40):
@@ -47,7 +66,13 @@ class AgentOne:
         property_priority_queue = reversed(sorted(property_priority_queue))
 
     def getBSMTDecision(self, state):
-        return False
+        bsmt = False
+        position = state[PLAYER_POSITION_INDEX][self.id-1]
+        if position in self.buyable_properties and state[PROPERTY_STATUS_INDEX][position] == 0:
+            properties = self.mortgage_property_to_buy(position, state)
+            if properties:
+                bsmt = ("M", properties)
+        return bsmt
 
     def respondTrade(self, state):
         cash_offer = state[5][1]
@@ -68,7 +93,18 @@ class AgentOne:
         return True
 
     def buyProperty(self, state):
-        return True
+        position = state[PLAYER_POSITION_INDEX][self.id-1] 
+        property_for_sale = board[position]
+        price = property_for_sale['price']
+        # id = 1 for player 1 and 2 for player 2
+        money = state[PLAYER_CASH_INDEX][self.id-1] # liquid money
+        money_left = money - price
+        threshold_cash = self.calculate_threshold_cash_futue(state)
+
+        if money_left > threshold_cash:
+            return True
+        else: 
+            return False
 
     def auctionProperty(self, state):
         return 0
@@ -87,13 +123,16 @@ class AgentOne:
 
     #look ahead 2-12 locations and return the max money I might have to spend
     def calculate_threshold_cash_futue(self, state):
+        # if possible try and add 
         if(self.id == 1):
             currentPos = state[PLAYER_POSITION_INDEX][0]
         else:
             currentPos = state[PLAYER_POSITION_INDEX][1]
+        if currentPos == -1:
+            currentPos = 10
         maxMoney = 0
         for j in range(2,13):
-            i = j + currentPos
+            i = (j + currentPos) %
             money = 0
             if((state[PROPERTY_STATUS_INDEX][i] <0 and self.id==1) or (state[PROPERTY_STATUS_INDEX][i] >0 and self.id==2)):
                 #its his property
@@ -262,6 +301,38 @@ class AgentOne:
             prop[0] = value
         property_priority_queue = reversed(sorted(property_priority_queue))
 
+
+    def get_my_properties(self, pstatus):
+        # return list of properties that belong to me
+        # for each property in priority queue, check status from pstatus
+        # pstatus is nothing but state[PROPERTY_STATUS_INDEX] 
+        return [prop for prop in property_priority_queue if pstatus[prop[1]] == -1**(self.id+1)]
+
+    def get_property_value(self, position):
+        # return the property at the current position
+        return [prop for prop in property_priority_queue if prop[1] == position][0]
+
+    def mortgage_property_to_buy(self, position, state):
+        threshold_cash = self.calculate_threshold_cash_futue(state)
+        money = state[PLAYER_CASH_INDEX][self.id - 1]
+        price = board[position]['price']
+        money_left = money - price
+
+        if money_left < threshold_cash:
+            my_properties = self.get_my_properties(state[PROPERTY_STATUS_INDEX])
+            property_value = self.get_property_value(position)
+            mortgage_sum = 0
+            mortgage_list = []
+            for i in range(len(my_properties) -1, -1, -1)):
+                if my_properties[i][0] > property_value:
+                    break
+                elif mortgage_sum >= threshold_cash - money:
+                    return mortgage_list
+                else: 
+                    mortgage_list.append(my_properties[i][1])
+                    mortgage_sum += getMortgagePrice(price)
+        return []
+    
     def receiveState(self, state):
         with open('train.tsv', 'a') as f:
             f.write(str(self.id) + "\t")

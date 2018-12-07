@@ -1,4 +1,5 @@
 from constants import board
+from math import ceil
 
 # DONE: mortgage_property_to_buy -- CHECK IF ANY PROPERTIES CAN BE MORTGAGED AND RETURN A LIST FOR BUYING A NEW PROPERTY
     # # we don't have enough cash
@@ -109,7 +110,8 @@ class AgentOne:
             return False
 
     def auctionProperty(self, state):
-        property_auction = board[state[PHASE_PAYLOAD_INDEX][0]]
+        prop = state[PHASE_PAYLOAD_INDEX][0]
+        property_auction = board[prop]
         price = property_auction['price']
         # id = 1 for player 1 and 2 for player 2
         money = state[PLAYER_CASH_INDEX][self.id-1] # liquid money
@@ -124,8 +126,7 @@ class AgentOne:
             if p2_money < price:
                 return p2_money + 1
             else:
-                return self.get_fair_price(property_auction)
-
+                return ceil(self.get_fair_price(prop, price))
         return 0
 
     def jailDecision(self, state):
@@ -357,8 +358,20 @@ class AgentOne:
                     mortgage_sum += getMortgagePrice(price)
         return []
     
-    def get_fair_price(self, property):
-        pass
+    def get_fair_price(self, prop, price):
+        factor = 0.25
+        price = board[prop]['price']
+        for i in range(28):
+            if prop == self.property_priority_queue[i][1]:
+                if i < 7:
+                    return (1 + factor) * price
+                elif i < 14:
+                    return price
+                elif i < 21:
+                    return 0.75 * price
+                elif i < 28:
+                    return 0.5 * price
+
 
     def receiveState(self, state):
         with open('train.tsv', 'a') as f:

@@ -6,18 +6,18 @@ from adjudicator import Adjudicator
 from Agent_fixed_policy2 import AgentOne as fPolicyAgent2
 from Agent import AgentOne as fPolicyAgent1
 from Agent0 import AgentZero
-from RLAgent import AgentRL
+# from RLAgent import AgentRL
 
 
-agentOne = AgentZero(1)
-agentTwo = AgentRL(2)
+# agentOne = AgentZero(1)
+# agentTwo = AgentRL(2)
 
 fpolicyAgent1 = fPolicyAgent1(1)
 fpolicyAgent2 = fPolicyAgent2(2)
 agentZero = AgentZero(2)
 board = Adjudicator()
 results = []
-for i in range(1):
+for i in range(100):
     [winner, final_state] = board.runGame(agentOne=fpolicyAgent1, agentTwo=fpolicyAgent2)
     results.append(winner)
 
@@ -35,7 +35,7 @@ for i in range(len(final_state[1])):
     owner = final_state[1][i]
     if owner:
         owner /= abs(owner)
-    ownership[final_state[1][i]].append(i)
+    ownership[owner].append(i)
 
 
 

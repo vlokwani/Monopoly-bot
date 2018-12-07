@@ -1,4 +1,5 @@
 import sys, os
+import csv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname('__file__'), 'Monopoly')))
 
@@ -20,6 +21,19 @@ results = []
 for i in range(100):
     [winner, final_state] = board.runGame(agentOne=fpolicyAgent1, agentTwo=fpolicyAgent2)
     results.append(winner)
+    count_1 = 0
+    count_2 = 0
+    for i in results:
+        if(i==1):
+            count_1+=1
+        else:
+            count_2+=1
+    with open('results-100.csv', 'w') as myfile:
+        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+        wr.writerow(results)
+    with open('results-summary.csv', 'w') as myfile:
+        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+        wr.writerow([count_1, count_2])
 
 # print("Printing final state returned by run game: ")
 # print(final_state)
@@ -48,4 +62,3 @@ print("\n\n\n\n")
 
 
 print(winner)
-

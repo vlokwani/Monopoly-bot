@@ -109,6 +109,23 @@ class AgentOne:
             return False
 
     def auctionProperty(self, state):
+        property_auction = board[state[PHASE_PAYLOAD_INDEX][0]]
+        price = property_auction['price']
+        # id = 1 for player 1 and 2 for player 2
+        money = state[PLAYER_CASH_INDEX][self.id-1] # liquid money
+        money_left = money - price
+        threshold_cash = self.calculate_threshold_cash_futue(state)
+
+        p2_money = state[PLAYER_CASH_INDEX][self.id-2]
+
+        if money_left < threshold_cash:
+            return money - threshold_cash
+        else:
+            if p2_money < price:
+                return p2_money + 1
+            else:
+                return self.get_fair_price(property_auction)
+
         return 0
 
     def jailDecision(self, state):
@@ -315,8 +332,8 @@ class AgentOne:
     def get_property_value(self, position):
         # return the property at the current position
         current_property = [prop for prop in self.property_priority_queue if prop[1] == position]
-        for prop in self.property_priority_queue:
-            print(prop)
+        # for prop in self.property_priority_queue:
+        #     print(prop)
         return current_property[0]
 
     def mortgage_property_to_buy(self, position, state):
@@ -340,6 +357,9 @@ class AgentOne:
                     mortgage_sum += getMortgagePrice(price)
         return []
     
+    def get_fair_price(self, property):
+        pass
+
     def receiveState(self, state):
         with open('train.tsv', 'a') as f:
             f.write(str(self.id) + "\t")
@@ -347,4 +367,3 @@ class AgentOne:
                 f.write(str(state[index]) + "\t")
             f.write("\n")
         self.updatePropertyPriority(state)
-        print(self.property_priority_queue)

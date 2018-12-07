@@ -3,16 +3,22 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname('__file__'), 'Monopoly')))
 
 from adjudicator import Adjudicator
-from Agent import AgentOne
+from Agent_fixed_policy2 import AgentOne as fPolicyAgent2
+from Agent import AgentOne as fPolicyAgent1
 from Agent0 import AgentZero
 from RLAgent import AgentRL
 
+
 agentOne = AgentZero(1)
 agentTwo = AgentRL(2)
+
+fpolicyAgent1 = fPolicyAgent1(1)
+fpolicyAgent2 = fPolicyAgent2(2)
+agentZero = AgentZero(2)
 board = Adjudicator()
 results = []
-for i in range(100):
-    [winner, final_state] = board.runGame(agentOne=agentOne, agentTwo=agentTwo)
+for i in range(1):
+    [winner, final_state] = board.runGame(agentOne=fpolicyAgent1, agentTwo=fpolicyAgent2)
     results.append(winner)
 
 # print("Printing final state returned by run game: ")
@@ -20,7 +26,26 @@ for i in range(100):
 
 final_state = board.state
 
+ownership = {
+    0: [],
+    1: [],
+    -1: []
+}
+for i in range(len(final_state[1])):
+    owner = final_state[1][i]
+    if owner:
+        owner /= abs(owner)
+    ownership[final_state[1][i]].append(i)
+
+
+
 print("\n\n\n\n")
+
+print(ownership)
+
+print("\n\n\n\n")
+
+
 
 print(winner)
 

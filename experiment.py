@@ -4,12 +4,15 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname('__file__'), 'Monop
 
 from adjudicator import Adjudicator
 from Agent import AgentOne
-from Agent2 import AgentTwo
+from Agent0 import AgentZero
 
 agentOne = AgentOne(1)
-agentTwo = AgentTwo(2)
+agentTwo = AgentZero(2)
 board = Adjudicator()
-[winner, final_state] = board.runGame(agentOne=agentOne, agentTwo=agentTwo)
+results = []
+for i in range(100):
+    [winner, final_state] = board.runGame(agentOne=agentOne, agentTwo=agentTwo)
+    results.append(winner)
 
 # print("Printing final state returned by run game: ")
 # print(final_state)

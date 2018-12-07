@@ -28,12 +28,10 @@ state_indexes = [
     DEBT_INDEX
 ]
 
-property_priority_queue = []
 street_sets = [[1,3], [6,8,9], [11,13,14], [16,18,19], [21,23,24], [26,27,29], [31,32,34], [37,39]]
 railroad_set = [5, 15,25,35]
 utility_set = [12,28]
 
-property_priority_queue = []
 headers = "PLAYER,PLAYER_TURN,PROPERTY_STATUS,PLAYER_POSITION,PLAYER_CASH,PHASE_NUMBER,DEBT"
 
 def write_headers():
@@ -49,26 +47,30 @@ class AgentOne:
         self.id = id
         write_headers()
         self.buyable_properties = []
+        self.property_priority_queue = []
         for i in range(40):
             if board[i]['class'] in ['Street', 'Railroad', 'Utility']:
                 self.buyable_properties.append(i)
         self.initialize()
+        
+
 
     def initialize(self):
         for i in range(0,40):
             if(board[i]["class"]=="Street"):
                 pr = board[i]["price"]
-                property_priority_queue.append([pr,i])
+                self.property_priority_queue.append([pr,i])
             elif(board[i]["class"]=="Railroad"):
-                property_priority_queue.append([200,i])
+                self.property_priority_queue.append([200,i])
             elif(board[i]["class"]=="Utility"):
-                property_priority_queue.append([150,i])
-        property_priority_queue = reversed(sorted(property_priority_queue))
+                self.property_priority_queue.append([150,i])
+        self.property_priority_queue = list(reversed(sorted(self.property_priority_queue)))
 
     def getBSMTDecision(self, state):
         bsmt = False
         position = state[PLAYER_POSITION_INDEX][self.id-1]
         if position in self.buyable_properties and state[PROPERTY_STATUS_INDEX][position] == 0:
+            print("Priority Queue: {}".format(self.property_priority_queue))
             properties = self.mortgage_property_to_buy(position, state)
             if properties:
                 bsmt = ("M", properties)
@@ -114,7 +116,7 @@ class AgentOne:
 
     def offer_trade(self, state):
         #look at the property_priority_queue and get the property I want most.
-        for prop in property_priority_queue:
+        for prop in self.property_priority_queue:
             value = prop[0]
             propId = prop[1]
             if((state[PROPERTY_STATUS_INDEX][propId] > 0 and self.id==2) or (state[PROPERTY_STATUS_INDEX][propId] < 0 and self.id==1)):
@@ -132,7 +134,7 @@ class AgentOne:
             currentPos = 10
         maxMoney = 0
         for j in range(2,13):
-            i = (j + currentPos) %
+            i = (j + currentPos) % 40
             money = 0
             if((state[PROPERTY_STATUS_INDEX][i] <0 and self.id==1) or (state[PROPERTY_STATUS_INDEX][i] >0 and self.id==2)):
                 #its his property
@@ -155,7 +157,7 @@ class AgentOne:
                     for k in utility_set:
                         if(k!=i):
                             if((state[PROPERTY_STATUS_INDEX][k] <0 and self.id==1) or (state[PROPERTY_STATUS_INDEX][k] >0 and self.id==2)):
-                                countUtility++;
+                                countUtility += 1
                     if(countUtility == 1):
                         money = 12*4 #max dice roll
                     else:
@@ -165,7 +167,7 @@ class AgentOne:
                     for k in railroad_set:
                         if(k!=i):
                             if((state[PROPERTY_STATUS_INDEX][k] <0 and self.id==1) or (state[PROPERTY_STATUS_INDEX][k] >0 and self.id==2)):
-                                countRail++;
+                                countRail += 1
                     money = 25*countRail
                 else:
                     money = 200
@@ -179,24 +181,24 @@ class AgentOne:
         their_count = 1
         pClass = board[propertyIndex]["class"]
         if(pClass=="Street"):
-            for list in street_sets:
-                if(propertyIndex in list):
-                    for i in list:
+            for street_set in street_sets:
+                if(propertyIndex in street_set):
+                    for i in street_set:
                         if(i!=propertyIndex):
                             if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 1):
                                 their_count+=1
                             elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 2):
                                 their_count+=1
         elif(pClass=="Railroad"):
-            for item in railroad_set:
-                if(item != propertyIndex):
+            for i in railroad_set:
+                if(i != propertyIndex):
                     if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 1):
                         their_count+=1
                     elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 2):
                         their_count+=1
         elif(pClass=="Utility"):
-            for item in utility_set:
-                if(item != propertyIndex):
+            for i in utility_set:
+                if(i != propertyIndex):
                     if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 1):
                         their_count+=1
                     elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 2):
@@ -220,15 +222,15 @@ class AgentOne:
                             elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 1):
                                 my_count+=1
         elif(pClass=="Railroad"):
-            for item in railroad_set:
-                if(item != propertyIndex):
+            for i in railroad_set:
+                if(i != propertyIndex):
                     if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 2):
                         my_count+=1
                     elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 1):
                         my_count+=1
         elif(pClass=="Utility"):
-            for item in utility_set:
-                if(item != propertyIndex):
+            for i in utility_set:
+                if(i != propertyIndex):
                     if(state[PROPERTY_STATUS_INDEX][i] <0 and self.id == 2):
                         my_count+=1
                     elif(state[PROPERTY_STATUS_INDEX][i] >0 and self.id == 1):
@@ -245,7 +247,7 @@ class AgentOne:
             return value*0.3
         elif(pClass=="Street" and count==3):
             return value*0.3
-        else
+        else:
             return 0
 
     def property_value(self, propertyIndex, count):
@@ -287,30 +289,33 @@ class AgentOne:
             return -1
 
     def updatePropertyPriority(self, state):
-        for prop in property_priority_queue:
-            k = prop[1]
+        for prop in self.property_priority_queue:
+            k = prop[1] 
             value = prop[0]
             if((state[PROPERTY_STATUS_INDEX][k] > 0 and self.id==1) or(state[PROPERTY_STATUS_INDEX][k] < 0 and self.id==2)):
                 #I own it
-                value = self.property_value_myProperty(self, k, state)
+                value = self.property_value_myProperty(k, state)
             elif((state[PROPERTY_STATUS_INDEX][k] > 0 and self.id==2)or(state[PROPERTY_STATUS_INDEX][k] < 0 and self.id==1)):
                 #he owns it
-                value = self.property_value_hisProperty(self, k, state)
+                value = self.property_value_hisProperty(k, state)
             else:
                 #bank owns it, do nothing
-            prop[0] = value
-        property_priority_queue = reversed(sorted(property_priority_queue))
+                prop[0] = value
+        self.property_priority_queue = list(reversed(sorted(self.property_priority_queue)))
 
 
     def get_my_properties(self, pstatus):
         # return list of properties that belong to me
         # for each property in priority queue, check status from pstatus
         # pstatus is nothing but state[PROPERTY_STATUS_INDEX] 
-        return [prop for prop in property_priority_queue if pstatus[prop[1]] == -1**(self.id+1)]
+        return [prop for prop in self.property_priority_queue if pstatus[prop[1]] == -1**(self.id+1)]
 
     def get_property_value(self, position):
         # return the property at the current position
-        return [prop for prop in property_priority_queue if prop[1] == position][0]
+        current_property = [prop for prop in self.property_priority_queue if prop[1] == position]
+        for prop in self.property_priority_queue:
+            print(prop)
+        return current_property[0]
 
     def mortgage_property_to_buy(self, position, state):
         threshold_cash = self.calculate_threshold_cash_futue(state)
@@ -323,8 +328,8 @@ class AgentOne:
             property_value = self.get_property_value(position)
             mortgage_sum = 0
             mortgage_list = []
-            for i in range(len(my_properties) -1, -1, -1)):
-                if my_properties[i][0] > property_value:
+            for i in range(len(my_properties) -1, -1, -1):
+                if my_properties[i][0] > property_value[0]:
                     break
                 elif mortgage_sum >= threshold_cash - money:
                     return mortgage_list
@@ -339,4 +344,4 @@ class AgentOne:
             for index in state_indexes:
                 f.write(str(state[index]) + "\t")
             f.write("\n")
-        self.updatePropertyPriority(self, state)
+        self.updatePropertyPriority(state)

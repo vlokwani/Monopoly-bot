@@ -5,9 +5,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname('__file__'), 'Monop
 from adjudicator import Adjudicator
 from Agent import AgentOne
 from Agent0 import AgentZero
+from RLAgent import AgentRL
 
-agentOne = AgentOne(1)
-agentTwo = AgentZero(2)
+agentOne = AgentZero(1)
+agentTwo = AgentRL(2)
 board = Adjudicator()
 results = []
 for i in range(100):

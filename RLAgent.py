@@ -18,7 +18,7 @@ adam = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, d
 rmsprop = keras.optimizers.RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
 
 buy_nn = Sequential()
-buy_nn.add(Dense(128, input_dim=state_size))
+buy_nn.add(Dense(128, input_dim=rl_state_size))
 buy_nn.add(Activation('relu'))
 buy_nn.add(Dense(2))
 buy_nn.add(Activation('linear'))
@@ -54,7 +54,7 @@ state_indexes = [
 groups = [[1,3], [6,8,9], [11,13,14], [16,18,19], [12,28], [21,23,24], [26,27,29], [31,32,34], [37,39], [5,15,25,35]]
 groupId = [0,1,0,1,0,10,2,0,2,2,0,3,5,3,3,10,4,0,4,4,0,6,0,6,6,10,7,7,5,7,0,8,8,0,8,10,0,9,0,9]
 
-class AgentTwo:
+class AgentRL:
     def __init__(self, id):
         self.id = id
         self.prev_state = None
@@ -67,7 +67,7 @@ class AgentTwo:
 
     def buyProperty(self, state):
 #        global buy_false, buy_true
-#        rl_state = getRLState(state)
+#        rl_state = self.getRLState(state)
 #        value = state[PLAYER_CASH_INDEX][self.id-1] - board[PLAYER_POSITION_INDEX[self.id-1]]["build_cost"]
 #        if value[self.id-1] < 0:
 #            rl_state[0,22*(self.id-1)] = 1
@@ -76,9 +76,10 @@ class AgentTwo:
 #        elif value[self.id-1] >= 20*50:
 #            rl_state[0,22*(self.id-1)+21] = 1
 #        else for i in range(20):
-#            if value[self.id-1] >= i*50 and val[self.id-1] < (i+1)*50:
+#            if value[self.id-1] >= i*50 and value[self.id-1] < (i+1)*50:
 #                rl_state[0, 22*(self.id-1)+i+1] = 1
-#            else rl_state[0, 22*(self.id-1)+i+1] = 0
+#            else:
+#                rl_state[0, 22*(self.id-1)+i+1] = 0
 #        
 #        if self.prev_state is not None:
 #            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice)
@@ -97,16 +98,16 @@ class AgentTwo:
 #            return False
 
     def auctionProperty(self, state):
-        rl_state = getRLState(state)
+        rl_state = self.getRLState(state)
         if self.prev_state is not None:
             self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice)
         self.prev_state = rl_state
         global epsilon
         if random.random() < epsilon:
             property_pos = state[PLAYER_POSITION_INDEX]
-            NNout = random.randint(0,board[property_pos]["price"]+1)
+            NNout = random.randint(0,(board[property_pos]["price"])+1)
         else:
-            NNout = np.argmax(buy_nn.predict(state))
+            NNout = np.argmax(buy_nn.predict(rl_state))
         self.prev_choice = NNout
         return NNout
 
@@ -132,7 +133,8 @@ class AgentTwo:
         return count[id]
 
     def getGroupId(self, id, state):
-        group_id = state[PLAYER_POSITION_INDEX][id]
+        player_pos = state[PLAYER_POSITION_INDEX][id-1]
+        group_id = groupId[player_pos]
         return group_id
 
     def getRLState(self, state):
@@ -142,7 +144,7 @@ class AgentTwo:
         value[self.id-1] = state[PLAYER_CASH_INDEX][self.id-1]
         value[2-self.id] = state[PLAYER_CASH_INDEX][2-self.id]
         for i in range(20):
-            if value[self.id-1] >= i*50 and val[self.id-1] < (i+1)*50:
+            if value[self.id-1] >= i*50 and value[self.id-1] < (i+1)*50:
                 rl_state[0, 22*(self.id-1)+i+1] = 1
                 break
         if value[self.id-1] >= 20*50:
@@ -150,18 +152,18 @@ class AgentTwo:
         if value[self.id-1] < 0:
             rl_state[0,22*(self.id-1)] = 1
         for i in range(20):
-            if value[2-self.id] >= i*50 and val[2-self.id] < (i+1)*50:
+            if value[2-self.id] >= i*50 and value[2-self.id] < (i+1)*50:
                 rl_state[0, 22*(2-self.id)+i+1] = 1
                 break
         if value[2-self.id] >= 20*50:
             rl_state[0,22*(2-self.id)+21] = 1
         if value[2-self.id] < 0:
             rl_state[0,22*(2-self.id)] = 1
-        rl_state[0,44] = getPropertyCount(self.id-1, state)/10
-        rl_state[0,45] = getPropertyCount(2-self.id, state)/10
-        rl_state[0,46 + getGroupId(self.id, state)] = 1
+        rl_state[0,44] = self.getPropertyCount(self.id-1, state)/10
+        rl_state[0,45] = self.getPropertyCount(2-self.id, state)/10
+        rl_state[0,46 + self.getGroupId(self.id, state)] = 1
         for i in range(10):
-            for j in len(groups[i]):
+            for j in range(len(groups[i])):
                 property_pos = groups[i][j]
                 if state[PROPERTY_STATUS_INDEX][property_pos] > 0:
                     count[0] += 1

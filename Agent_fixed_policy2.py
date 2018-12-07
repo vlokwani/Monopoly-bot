@@ -92,7 +92,7 @@ class AgentOne:
         if(net_offer < net_request):
             return False
         threshold_cash = self.calculate_threshold_cash_futue(state) + 100
-        if(cash_request > threshold_cash):
+        if(state[PLAYER_CASH_INDEX][self.id -1] - cash_request > threshold_cash):
             return False
         return True
 

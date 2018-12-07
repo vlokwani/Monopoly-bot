@@ -10,6 +10,7 @@ import time
 from constants import board
 
 rl_state_size = 76
+choice_options = 1
 bsize = 256
 batch_size_var = 128000
 epoc_count = 10
@@ -17,15 +18,17 @@ verbose_val = 1
 adam = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
 rmsprop = keras.optimizers.RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
 
-buy_nn = Sequential()
-buy_nn.add(Dense(128, input_dim=rl_state_size))
-buy_nn.add(Activation('relu'))
-buy_nn.add(Dense(2))
-buy_nn.add(Activation('linear'))
-buy_nn.compile(optimizer=adam, loss='mse')
+task_nn = Sequential()
+task_nn.add(Dense(128, input_dim=rl_state_size))
+task_nn.add(Activation('relu'))
+task_nn.add(Dense(350))
+task_nn.add(Activation('linear'))
+task_nn.compile(optimizer=adam, loss='mse')
 
 buy_true = 0
 buy_false = 0
+auc_false = 0
+auc_true = 0
 dataBefore = []
 dataAfter = []
 dataChoice = []
@@ -63,10 +66,38 @@ class AgentRL:
         return False
 
     def respondTrade(self, state):
-        return False
+        global auc_false, auc_true, choice_options
+        cash_offer = state[PHASE_PAYLOAD_INDEX][1]
+        properties_offer = state[PHASE_PAYLOAD_INDEX][2]
+        cash_request = state[PHASE_PAYLOAD_INDEX][3]
+        properties_request = state[PHASE_PAYLOAD_INDEX][4]
+        copy_state = copyState(state)
+        copy_state[PLAYER_CASH_INDEX][self.id - 1] += (cash_offer - cash_request)
+        copy_state[PLAYER_CASH_INDEX][2 - self.id] += (cash_request - cash_offer)
+        for i in properties_offer:
+            copy_state[PROPERTY_STATUS_INDEX][i] *= -1
+        for i in properties_request:
+            copy_state[PROPERTY_STATUS_INDEX][i] *= -1
+        rl_state = getRLState(copy_state)
+        choice_options = 2
+        if self.prev_state is not None:
+            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice, choice_options)
+        self.prev_state = rl_state
+        global epsilon
+        if random.random() < epsilon:
+            NNout = random.randint(0,1)
+        else:
+            NNout = np.argmax(task_nn.predict(rl_state))
+        self.prev_choice = NNout
+        if NNout == 1:
+            auc_true += 1
+            return True
+        else:
+            auc_false += 1
+            return False
 
     def buyProperty(self, state):
-#        global buy_false, buy_true
+#        global buy_false, buy_true, choice_options
 #        rl_state = self.getRLState(state)
 #        value = state[PLAYER_CASH_INDEX][self.id-1] - board[PLAYER_POSITION_INDEX[self.id-1]]["build_cost"]
 #        if value[self.id-1] < 0:
@@ -80,15 +111,15 @@ class AgentRL:
 #                rl_state[0, 22*(self.id-1)+i+1] = 1
 #            else:
 #                rl_state[0, 22*(self.id-1)+i+1] = 0
-#        
+#        choice_options = 2
 #        if self.prev_state is not None:
-#            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice)
+#            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice, choice_options)
 #        self.prev_state = rl_state
 #        global epsilon
 #        if random.random() < epsilon:
 #            NNout = random.randint(0,1)
 #        else:
-#            NNout = np.argmax(buy_nn.predict(rl_state))
+#            NNout = np.argmax(task_nn.predict(rl_state))
 #        self.prev_choice = NNout
 #        if NNout == 1:
 #            buy_true += 1
@@ -98,16 +129,18 @@ class AgentRL:
 #            return False
 
     def auctionProperty(self, state):
+        global choice_options
         rl_state = self.getRLState(state)
         if self.prev_state is not None:
-            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice)
+            choice_options = 350
+            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice, choice_options)
         self.prev_state = rl_state
         global epsilon
         if random.random() < epsilon:
-            property_pos = state[PLAYER_POSITION_INDEX]
-            NNout = random.randint(0,(board[property_pos]["price"])+1)
+            property_pos = state[PLAYER_POSITION_INDEX][self.id-1]
+            NNout = random.randint(0, (board[property_pos]["price"])+1)
         else:
-            NNout = np.argmax(buy_nn.predict(rl_state))
+            NNout = np.argmax(task_nn.predict(rl_state))
         self.prev_choice = NNout
         return NNout
 
@@ -120,6 +153,18 @@ class AgentRL:
             for index in state_indexes:
                 f.write(str(state[index]) + "\t")
             f.write("\n")
+
+    def copyState(state);
+        copy_state = []
+        for i in state:
+            if type(state[i]) == type(0):
+                copy_state.append(state[i])
+            else :
+                temp = []
+                for j in state[i]:
+                    temp.append(state[i][j])
+                copy_state[i].append(temp)
+        return copy_state
 
     def getPropertyCount(self, id, state):
         count = [0,0]
@@ -173,7 +218,7 @@ class AgentRL:
             rl_state[0, 56 + 10*(2-self.id) + i] = count[2-self.id]/len(groups[i])
         return rl_state
 
-    def trainData(self, beforeState, afterState, reward, choice):
+    def trainData(self, beforeState, afterState, reward, choice, choice_size):
         global dataBefore, dataAfter, dataReward, dataChoice
         dataBefore.append(beforeState)
         dataAfter.append(afterState)
@@ -184,17 +229,17 @@ class AgentRL:
         gamma = 0.99
         dbstate = np.asarray(dataBefore)
         dastate = np.asarray(dataAfter)
-        curQ = buy_nn.predict(dbstate.reshape(bsize, rl_state_size), batch_size = batch_size_var)
-        newQ = buy_nn.predict(dastate.reshape(bsize, rl_state_size), batch_size = batch_size_var)
+        curQ = task_nn.predict(dbstate.reshape(bsize, rl_state_size), batch_size = batch_size_var)
+        newQ = task_nn.predict(dastate.reshape(bsize, rl_state_size), batch_size = batch_size_var)
         maxQ = newQ.max(1)
-        y = np.zeros((bsize, 2))
+        y = np.zeros((bsize, choice_size))
         y[:] = curQ[:]
         for i in range(bsize):
             if dataReward[i] == 0:
                 y[i][dataChoice[i]] = dataReward[i] + gamma*maxQ[i]
             else:
                 y[i][dataChoice[i]] = dataReward[i]
-        buy_nn.fit(dbstate.reshape(bsize, state_size), y, batch_size = batch_size_var, epochs = epoc_count, verbose = verbose_val)
+        task_nn.fit(dbstate.reshape(bsize, state_size), y, batch_size = batch_size_var, epochs = epoc_count, verbose = verbose_val)
 
 
         #clearing the buffers

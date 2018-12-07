@@ -29,7 +29,7 @@ class AgentZero:
         return False
 
     def buyProperty(self, state):
-        return True
+        return False
 
     def auctionProperty(self, state):
         return 0

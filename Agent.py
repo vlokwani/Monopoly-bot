@@ -76,6 +76,15 @@ class AgentOne:
     def jailDecision(self, state):
         return "R",
 
+    def offer_trade(self, state):
+        #look at the property_priority_queue and get the property I want most.
+        for prop in property_priority_queue:
+            value = prop[0]
+            propId = prop[1]
+            if((state[PROPERTY_STATUS_INDEX][propId] > 0 and self.id==2) or (state[PROPERTY_STATUS_INDEX][propId] < 0 and self.id==1)):
+                return [propId, value*0.5]
+        return [-1, -1]
+
     #look ahead 2-12 locations and return the max money I might have to spend
     def calculate_threshold_cash_futue(self, state):
         if(self.id == 1):

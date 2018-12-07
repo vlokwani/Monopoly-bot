@@ -18,6 +18,7 @@ state_indexes = [
     DEBT_INDEX
 ]
 
+property_priority_queue = []
 street_sets = [[1,3], [6,8,9], [11,13,14], [16,18,19], [21,23,24], [26,27,29], [31,32,34], [37,39]]
 railroad_set = [5, 15,25,35]
 utility_set = [12,28]
@@ -33,6 +34,17 @@ class AgentOne:
     def __init__(self, id):
         self.id = id
         write_headers()
+
+    def initialize(self):
+        for i in range(0,40):
+            if(board[i]["class"]=="Street"):
+                pr = board[i]["price"]
+                property_priority_queue.append([pr,i])
+            elif(board[i]["class"]=="Railroad"):
+                property_priority_queue.append([200,i])
+            elif(board[i]["class"]=="Utility"):
+                property_priority_queue.append([150,i])
+        property_priority_queue = reversed(sorted(property_priority_queue))
 
     def getBSMTDecision(self, state):
         return False
@@ -112,8 +124,6 @@ class AgentOne:
             if(money > maxMoney):
                 maxMoney = money
         return maxMoney
-
-
 
     #return property's value if I have it now and the other agent might get in future.
     def property_value_myProperty(self, propertyIndex, state):
@@ -228,9 +238,25 @@ class AgentOne:
         else:
             return -1
 
+    def updatePropertyPriority(self, state):
+        for prop in property_priority_queue:
+            k = prop[1]
+            value = prop[0]
+            if((state[PROPERTY_STATUS_INDEX][k] > 0 and self.id==1) or(state[PROPERTY_STATUS_INDEX][k] < 0 and self.id==2)):
+                #I own it
+                value = self.property_value_myProperty(self, k, state)
+            elif((state[PROPERTY_STATUS_INDEX][k] > 0 and self.id==2)or(state[PROPERTY_STATUS_INDEX][k] < 0 and self.id==1)):
+                #he owns it
+                value = self.property_value_hisProperty(self, k, state)
+            else:
+                #bank owns it, do nothing
+            prop[0] = value
+        property_priority_queue = reversed(sorted(property_priority_queue))
+
     def receiveState(self, state):
         with open('train.tsv', 'a') as f:
             f.write(str(self.id) + "\t")
             for index in state_indexes:
                 f.write(str(state[index]) + "\t")
             f.write("\n")
+        self.updatePropertyPriority(self, state)

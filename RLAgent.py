@@ -21,14 +21,14 @@ rmsprop = keras.optimizers.RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
 task_nn = Sequential()
 task_nn.add(Dense(128, input_dim=rl_state_size))
 task_nn.add(Activation('relu'))
-task_nn.add(Dense(350))
+task_nn.add(Dense(2))
 task_nn.add(Activation('linear'))
 task_nn.compile(optimizer=adam, loss='mse')
 
 buy_true = 0
 buy_false = 0
-auc_false = 0
-auc_true = 0
+res_trade_false = 0
+res_trade_true = 0
 dataBefore = []
 dataAfter = []
 dataChoice = []
@@ -66,19 +66,19 @@ class AgentRL:
         return False
 
     def respondTrade(self, state):
-        global auc_false, auc_true, choice_options
-        cash_offer = state[PHASE_PAYLOAD_INDEX][1]
-        properties_offer = state[PHASE_PAYLOAD_INDEX][2]
-        cash_request = state[PHASE_PAYLOAD_INDEX][3]
-        properties_request = state[PHASE_PAYLOAD_INDEX][4]
-        copy_state = copyState(state)
+        global res_trade_false, res_trade_true, choice_options
+        cash_offer = state[PHASE_PAYLOAD_INDEX][0]
+        properties_offer = state[PHASE_PAYLOAD_INDEX][1]
+        cash_request = state[PHASE_PAYLOAD_INDEX][2]
+        properties_request = state[PHASE_PAYLOAD_INDEX][3]
+        copy_state = self.copyState(state)
         copy_state[PLAYER_CASH_INDEX][self.id - 1] += (cash_offer - cash_request)
         copy_state[PLAYER_CASH_INDEX][2 - self.id] += (cash_request - cash_offer)
         for i in properties_offer:
             copy_state[PROPERTY_STATUS_INDEX][i] *= -1
         for i in properties_request:
             copy_state[PROPERTY_STATUS_INDEX][i] *= -1
-        rl_state = getRLState(copy_state)
+        rl_state = self.getRLState(copy_state)
         choice_options = 2
         if self.prev_state is not None:
             self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice, choice_options)
@@ -86,14 +86,16 @@ class AgentRL:
         global epsilon
         if random.random() < epsilon:
             NNout = random.randint(0,1)
+        elif (cash_offer - cash_request) < 0:
+            NNout = 0
         else:
             NNout = np.argmax(task_nn.predict(rl_state))
         self.prev_choice = NNout
         if NNout == 1:
-            auc_true += 1
+            res_trade_true += 1
             return True
         else:
-            auc_false += 1
+            res_trade_false += 1
             return False
 
     def buyProperty(self, state):
@@ -129,23 +131,48 @@ class AgentRL:
 #            return False
 
     def auctionProperty(self, state):
-        global choice_options
-        rl_state = self.getRLState(state)
-        if self.prev_state is not None:
-            choice_options = 350
-            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice, choice_options)
-        self.prev_state = rl_state
-        global epsilon
-        if random.random() < epsilon:
-            property_pos = state[PLAYER_POSITION_INDEX][self.id-1]
-            NNout = random.randint(0, (board[property_pos]["price"])+1)
-        else:
-            NNout = np.argmax(task_nn.predict(rl_state))
-        self.prev_choice = NNout
-        return NNout
+#        global choice_options, epsilon
+#        rl_state = self.getRLState(state)
+#        if self.prev_state is not None:
+#            choice_options = 350
+#            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice, choice_options)
+#        self.prev_state = rl_state
+#        if random.random() < epsilon:
+#            property_pos = state[PLAYER_POSITION_INDEX][self.id-1]
+#            NNout = random.randint(0, (board[property_pos]["price"])+1)
+#        else:
+#            NNout = np.argmax(task_nn.predict(rl_state))
+#        self.prev_choice = NNout
+#        return NNout
+        return 0
 
     def jailDecision(self, state):
-        return "R",
+#        global choice_options, epsilon
+#        if [state[PROPERTY_STATUS_INDEX][40] == 1]:
+#            choice = ["R", "P", ["C", 40]
+#        elif [state[PROPERTY_STATUS_INDEX][41] == 1]:
+#            choice = ["R", "P", ["C", 41]
+#        else:
+#            choice = ["R", "P"]
+#        if random.random() < epsilon:
+#            NNout = random.randint(0,len(choice))
+#            if (NNout == 1) and (state[PLAYER_CASH_INDEX][self.id-1] >= 50):
+#                copy_state = self.copyState(state)
+#                copy_state[PLAYER_CASH_INDEX][self.id-1] -= 50
+#                rl_state = self.getRLState(copy_state)
+#            else:
+#                rl_state = self.getRLState(state)
+#        else:
+#            NNout = np.argmax(task_nn.predict(rl_state))
+#        if NNout >= len(choice):
+#            return "R"
+#        if self.prev_state is not None:
+#            choice_options = 3
+#            self.trainData(self.prev_state[0], rl_state[0], 0, self.prev_choice, choice_options)
+#        self.prev_state = rl_state
+#        self.prev_choice = NNout
+#        return choice[NNout]
+        return "R"
 
     def receiveState(self, state):
         with open('train.tsv', 'a') as f:
@@ -154,7 +181,7 @@ class AgentRL:
                 f.write(str(state[index]) + "\t")
             f.write("\n")
 
-    def copyState(state);
+    def copyState(state):
         copy_state = []
         for i in state:
             if type(state[i]) == type(0):

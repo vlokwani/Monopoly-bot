@@ -72,8 +72,8 @@ class AgentRL:
         cash_request = state[PHASE_PAYLOAD_INDEX][2]
         properties_request = state[PHASE_PAYLOAD_INDEX][3]
         copy_state = self.copyState(state)
-        copy_state[PLAYER_CASH_INDEX][self.id - 1] += (cash_offer - cash_request)
-        copy_state[PLAYER_CASH_INDEX][2 - self.id] += (cash_request - cash_offer)
+        copy_state[PLAYER_CASH_INDEX][self.id - 1] = copy_state[PLAYER_CASH_INDEX][self.id - 1] + (cash_offer - cash_request)
+        copy_state[PLAYER_CASH_INDEX][2 - self.id] = copy_state[PLAYER_CASH_INDEX][2 - self.id] + (cash_request - cash_offer)
         for i in properties_offer:
             copy_state[PROPERTY_STATUS_INDEX][i] *= -1
         for i in properties_request:
@@ -96,7 +96,7 @@ class AgentRL:
             return True
         else:
             res_trade_false += 1
-            return False
+        return False
 
     def buyProperty(self, state):
 #        global buy_false, buy_true, choice_options
@@ -181,16 +181,16 @@ class AgentRL:
                 f.write(str(state[index]) + "\t")
             f.write("\n")
 
-    def copyState(state):
+    def copyState(self, state):
         copy_state = []
-        for i in state:
+        for i in range(0,len(state)):
             if type(state[i]) == type(0):
                 copy_state.append(state[i])
             else :
                 temp = []
                 for j in state[i]:
-                    temp.append(state[i][j])
-                copy_state[i].append(temp)
+                    temp.append(j)
+                copy_state.append(temp)
         return copy_state
 
     def getPropertyCount(self, id, state):
@@ -266,7 +266,7 @@ class AgentRL:
                 y[i][dataChoice[i]] = dataReward[i] + gamma*maxQ[i]
             else:
                 y[i][dataChoice[i]] = dataReward[i]
-        task_nn.fit(dbstate.reshape(bsize, state_size), y, batch_size = batch_size_var, epochs = epoc_count, verbose = verbose_val)
+        task_nn.fit(dbstate.reshape(bsize, rl_state_size), y, batch_size = batch_size_var, epochs = epoc_count, verbose = verbose_val)
 
 
         #clearing the buffers

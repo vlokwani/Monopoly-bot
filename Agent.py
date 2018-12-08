@@ -74,6 +74,9 @@ class AgentOne:
             properties = self.mortgage_property_to_buy(position, state)
             if properties:
                 bsmt = ("M", properties)
+        properties = self.offer_trade(state)
+        if properties:
+            bsmt = properties
         return bsmt
 
     def respondTrade(self, state):

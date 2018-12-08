@@ -11,7 +11,7 @@ from RLAgent import AgentRL
 
 
 # agentOne = AgentZero(1)
-agentRL = AgentRL(2)
+agentRL = AgentRL(1)
 
 fpolicyAgent1 = fPolicyAgent1(1)
 fpolicyAgent2 = fPolicyAgent2(2)
@@ -19,7 +19,7 @@ agentZero = AgentZero(2)
 board = Adjudicator()
 results = []
 for i in range(100):
-    [winner, final_state] = board.runGame(agentOne=fpolicyAgent1, agentTwo=agentRL)
+    [winner, final_state] = board.runGame(agentOne=agentRL, agentTwo=fpolicyAgent2)
     results.append(winner)
     count_1 = 0
     count_2 = 0

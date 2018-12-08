@@ -77,10 +77,10 @@ class AgentOne:
         return bsmt
 
     def respondTrade(self, state):
-        cash_offer = state[5][1]
-        property_offer = state[5][2]
-        cash_request = state[5][3]
-        property_request = state[5][4]
+        cash_offer = state[5][0]
+        property_offer = state[5][1]
+        cash_request = state[5][2]
+        property_request = state[5][3]
         net_offer = cash_offer
         for i in property_offer:
             net_offer += self.property_value_hisProperty(i, state)

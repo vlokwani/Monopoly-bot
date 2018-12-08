@@ -32,7 +32,6 @@ state_indexes = [
 street_sets = [[1,3], [6,8,9], [11,13,14], [16,18,19], [21,23,24], [26,27,29], [31,32,34], [37,39]]
 railroad_set = [5, 15,25,35]
 utility_set = [12,28]
-trade_count_itr = 0
 
 headers = "PLAYER,PLAYER_TURN,PROPERTY_STATUS,PLAYER_POSITION,PLAYER_CASH,PHASE_NUMBER,DEBT"
 
@@ -54,8 +53,8 @@ class AgentOne:
             if board[i]['class'] in ['Street', 'Railroad', 'Utility']:
                 self.buyable_properties.append(i)
         self.initialize()
-
-
+        self.trade_count_itr = 0
+        self.mortgaged_properties = []
 
     def initialize(self):
         for i in range(0,40):
@@ -71,11 +70,30 @@ class AgentOne:
     def getBSMTDecision(self, state):
         bsmt = False
         position = state[PLAYER_POSITION_INDEX][self.id-1]
+        threshold_cash = self.calculate_threshold_cash_futue(state)
         if position in self.buyable_properties and state[PROPERTY_STATUS_INDEX][position] == 0:
             # print("Priority Queue: {}".format(self.property_priority_queue))
             properties = self.mortgage_property_to_buy(position, state)
             if properties:
+                print("Mortgaging properties: {}".format(properties))
                 bsmt = ("M", properties)
+                self.mortgaged_properties.extend(properties)
+                return bsmt
+        elif state[PLAYER_CASH_INDEX][self.id-1] <= threshold_cash:
+            # sell improvements or mortgage
+            # priority 1 sell
+            # priority 2 mortgage
+            properties = self.mortgage_or_sell()
+            if properties:
+                bsmt = properties
+                if bsmt[0] == 'M':
+                    self.mortgaged_properties.extend(properties[1])
+                return bsmt
+        # elif state[PLAYER_CASH_INDEX][self.id-1] > threshold_cash + 
+        properties = self.offer_trade(state)
+        if properties:
+            bsmt = properties
+
         return bsmt
 
     def respondTrade(self, state):
@@ -83,6 +101,7 @@ class AgentOne:
         property_offer = state[5][1]
         cash_request = state[5][2]
         property_request = state[5][3]
+        
         net_offer = cash_offer
         for i in property_offer:
             net_offer += self.property_value_hisProperty(i, state)
@@ -119,15 +138,22 @@ class AgentOne:
         money_left = money - price
         threshold_cash = self.calculate_threshold_cash_futue(state)
 
+        if money_left < 0:
+            return 0
+
         p2_money = state[PLAYER_CASH_INDEX][self.id-2]
+        fair_value = ceil(self.get_fair_price(prop, price))
 
         if money_left < threshold_cash:
-            return money - threshold_cash
+            print("Proposed_auction_value1: {} for property {}:{}".format(min(money - threshold_cash, fair_value, p2_money + 1), property_auction['name'], price))
+            return min(money - threshold_cash, fair_value, p2_money + 1)
         else:
             if p2_money < price:
-                return p2_money + 1
+                print("Proposed_auction_value2: {} for property {}:{}".format(min(p2_money + 1, fair_value), property_auction['name'], price))
+                return min(p2_money + 1, fair_value)
             else:
-                return ceil(self.get_fair_price(prop, price))
+                print("Proposed_auction_value3: {} for property {}:{}".format(fair_value, property_auction['name'], price))
+                return fair_value
         return 0
 
     def jailDecision(self, state):
@@ -135,56 +161,56 @@ class AgentOne:
 
     #returns cash offer, [property numbers for offer], cash requesting, [property numbers requesting]
     def offer_trade(self, state):
-        if(trade_count_itr == 0):
+        if(self.trade_count_itr == 0):
             #look at the property_priority_queue and get the property I want most.
             for prop in self.property_priority_queue:
                 value = prop[0]
                 propId = prop[1]
                 if((state[PROPERTY_STATUS_INDEX][propId] > 0 and self.id==2) or (state[PROPERTY_STATUS_INDEX][propId] < 0 and self.id==1)):
-                    trade_count_itr+=1
+                    self.trade_count_itr+=1
                     return ["T", value*0.5, [], 0, [propId]]
-        elif(trade_count_itr == 1):
+        elif(self.trade_count_itr == 1):
             #look at the property_priority_queue and get the property I want most.
             for prop in self.property_priority_queue:
                 value = prop[0]
                 propId = prop[1]
                 if((state[PROPERTY_STATUS_INDEX][propId] > 0 and self.id==2) or (state[PROPERTY_STATUS_INDEX][propId] < 0 and self.id==1)):
-                    trade_count_itr+=1
+                    self.trade_count_itr+=1
                     return ["T", value*0.6, [], 0, [propId]]
-        elif(trade_count_itr == 2):
+        elif(self.trade_count_itr == 2):
             #look at the property_priority_queue and get the property I want most.
             for prop in self.property_priority_queue:
                 value = prop[0]
                 propId = prop[1]
                 if((state[PROPERTY_STATUS_INDEX][propId] > 0 and self.id==2) or (state[PROPERTY_STATUS_INDEX][propId] < 0 and self.id==1)):
-                    trade_count_itr+=1
+                    self.trade_count_itr+=1
                     return ["T", value*0.75, [], 0, [propId]]
-        elif(trade_count_itr == 3):
+        elif(self.trade_count_itr == 3):
             #look at the property_priority_queue and get money for a property I don't want.
             rev_queue = list(reversed(self.property_priority_queue))
-            for prop in self.rev_queue:
+            for prop in rev_queue:
                 value = prop[0]
                 propId = prop[1]
                 if((state[PROPERTY_STATUS_INDEX][propId] < 0 and self.id==2) or (state[PROPERTY_STATUS_INDEX][propId] > 0 and self.id==1)):
-                    trade_count_itr += 1
+                    self.trade_count_itr += 1
                     return ["T", 0, [propId], value*3, []]
-        elif(trade_count_itr == 4):
+        elif(self.trade_count_itr == 4):
             #look at the property_priority_queue and get money for a property I don't want.
             rev_queue = list(reversed(self.property_priority_queue))
-            for prop in self.rev_queue:
+            for prop in rev_queue:
                 value = prop[0]
                 propId = prop[1]
                 if((state[PROPERTY_STATUS_INDEX][propId] < 0 and self.id==2) or (state[PROPERTY_STATUS_INDEX][propId] > 0 and self.id==1)):
-                    trade_count_itr += 1
+                    self.trade_count_itr += 1
                     return ["T", 0, [propId], value*2, []]
-        elif(trade_count_itr == 5):
+        elif(self.trade_count_itr == 5):
             #look at the property_priority_queue and get money for a property I don't want.
             rev_queue = list(reversed(self.property_priority_queue))
-            for prop in self.rev_queue:
+            for prop in rev_queue:
                 value = prop[0]
                 propId = prop[1]
                 if((state[PROPERTY_STATUS_INDEX][propId] < 0 and self.id==2) or (state[PROPERTY_STATUS_INDEX][propId] > 0 and self.id==1)):
-                    trade_count_itr = 0
+                    self.trade_count_itr = 0
                     return ["T", 0, [propId], value*1.5, []]
 
         return []
@@ -406,19 +432,22 @@ class AgentOne:
                     mortgage_sum += getMortgagePrice(price)
         return []
 
+    def mortgage_or_sell(self):
+        return []
+
     def get_fair_price(self, prop, price):
-        factor = 0.25
-        price = board[prop]['price']
+        # price = board[prop]['price']
         for i in range(28):
             if prop == self.property_priority_queue[i][1]:
                 if i < 7:
-                    return (1 + factor) * price
+                    return 1 * price + 1
                 elif i < 14:
-                    return price
-                elif i < 21:
-                    return 0.75 * price
-                elif i < 28:
                     return 0.5 * price
+                elif i < 21:
+                    return 0.2 * price
+                elif i < 28:
+                    return 0.1 * price
+
 
 
     def receiveState(self, state):
@@ -428,3 +457,6 @@ class AgentOne:
                 f.write(str(state[index]) + "\t")
             f.write("\n")
         self.updatePropertyPriority(state)
+        if self.mortgaged_properties:
+            # print(self.mortgaged_properties)
+            pass

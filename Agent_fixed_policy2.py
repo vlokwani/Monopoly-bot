@@ -25,7 +25,7 @@ state_indexes = [
     PLAYER_POSITION_INDEX,
     PLAYER_CASH_INDEX,
     PHASE_NUMBER_INDEX,
-#    PHASE_PAYLOAD_INDEX,
+    PHASE_PAYLOAD_INDEX,
     DEBT_INDEX
 ]
 
@@ -33,7 +33,6 @@ street_sets = [[1,3], [6,8,9], [11,13,14], [16,18,19], [21,23,24], [26,27,29], [
 railroad_set = [5, 15,25,35]
 utility_set = [12,28]
 
-headers = "PLAYER,PLAYER_TURN,PROPERTY_STATUS,PLAYER_POSITION,PLAYER_CASH,PHASE_NUMBER,DEBT"
 
 def write_headers():
     with open('train.tsv', 'w') as f:
@@ -44,9 +43,8 @@ def getMortgagePrice(price):
     return price/2
 
 class AgentOne:
-    def __init__(self, id):
+    def __init__(self, id, game=None):
         self.id = id
-        write_headers()
         self.buyable_properties = []
         self.property_priority_queue = []
         for i in range(40):
@@ -55,6 +53,7 @@ class AgentOne:
         self.initialize()
         self.trade_count_itr = 0
         self.mortgaged_properties = []
+        self.game = game
 
     def initialize(self):
         for i in range(0,40):
@@ -75,7 +74,7 @@ class AgentOne:
             # print("Priority Queue: {}".format(self.property_priority_queue))
             properties = self.mortgage_property_to_buy(position, state)
             if properties:
-                print("Mortgaging properties: {}".format(properties))
+                # print("Mortgaging properties: {}".format(properties))
                 bsmt = ("M", properties)
                 self.mortgaged_properties.extend(properties)
                 return bsmt
@@ -83,7 +82,7 @@ class AgentOne:
             # sell improvements or mortgage
             # priority 1 sell
             # priority 2 mortgage
-            properties = self.mortgage_or_sell()
+            properties = self.mortgage_or_sell(position, state)
             if properties:
                 bsmt = properties
                 if bsmt[0] == 'M':
@@ -101,7 +100,7 @@ class AgentOne:
         property_offer = state[5][1]
         cash_request = state[5][2]
         property_request = state[5][3]
-        
+
         net_offer = cash_offer
         for i in property_offer:
             net_offer += self.property_value_hisProperty(i, state)
@@ -145,14 +144,14 @@ class AgentOne:
         fair_value = ceil(self.get_fair_price(prop, price))
 
         if money_left < threshold_cash:
-            print("Proposed_auction_value1: {} for property {}:{}".format(min(money - threshold_cash, fair_value, p2_money + 1), property_auction['name'], price))
+            # print("Proposed_auction_value1: {} for property {}:{}".format(min(money - threshold_cash, fair_value, p2_money + 1), property_auction['name'], price))
             return min(money - threshold_cash, fair_value, p2_money + 1)
         else:
             if p2_money < price:
-                print("Proposed_auction_value2: {} for property {}:{}".format(min(p2_money + 1, fair_value), property_auction['name'], price))
+                # print("Proposed_auction_value2: {} for property {}:{}".format(min(p2_money + 1, fair_value), property_auction['name'], price))
                 return min(p2_money + 1, fair_value)
             else:
-                print("Proposed_auction_value3: {} for property {}:{}".format(fair_value, property_auction['name'], price))
+                # print("Proposed_auction_value3: {} for property {}:{}".format(fair_value, property_auction['name'], price))
                 return fair_value
         return 0
 
@@ -432,7 +431,13 @@ class AgentOne:
                     mortgage_sum += getMortgagePrice(price)
         return []
 
-    def mortgage_or_sell(self):
+    def mortgage_or_sell(self, position, state):
+        threshold_cash = self.calculate_threshold_cash_futue(state)
+        money = state[PLAYER_CASH_INDEX][self.id - 1]
+        # price = board[position]['price']
+        money_left = money - price
+        my_properties = self.get_my_properties(state[PROPERTY_STATUS_INDEX])
+        property_value = self.get_property_value(position)
         return []
 
     def get_fair_price(self, prop, price):
@@ -451,12 +456,12 @@ class AgentOne:
 
 
     def receiveState(self, state):
-        with open('train.tsv', 'a') as f:
-            f.write(str(self.id) + "\t")
-            for index in state_indexes:
-                f.write(str(state[index]) + "\t")
-            f.write("\n")
+        if self.game:
+            with open('train.tsv', 'a') as f:
+                f.write(str(self.game) +  "\t")
+                f.write(str(self.id) + "\t")
+                for index in state_indexes:
+                    f.write(str(state[index]) + "\t")
+                f.write("\n")
         self.updatePropertyPriority(state)
-        if self.mortgaged_properties:
-            # print(self.mortgaged_properties)
-            pass
+        

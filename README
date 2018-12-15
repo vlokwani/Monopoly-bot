@@ -1,0 +1,15 @@
+# Team Name - VAR
+# Agent file - Agent_Team_VAR.py
+# Agent class - Agent
+# Team Members - Vanshaj, Aayush, Ritika
+
+Files:
+
+experiment.py		-	Plays the game
+test_*			-	Test cases for the Adjudicator
+*.csv			-	Some results after running the game for 1000 times with 100 turns each
+Agent0.py		-	Dumb/Greedy bot
+Agent.py		-	Greedy and with some other fixed policies
+Agent_Team_VAR.py	-	Final version of Agent with Fixed Policies
+RL_Agent.py		-	Agent with Q learning, a bit incomplete and wasn't used because of lack of training it.
+

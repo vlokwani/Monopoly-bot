@@ -5,7 +5,7 @@ import progressbar
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname('__file__'), 'Monopoly')))
 
 from adjudicator import Adjudicator
-from Agent_fixed_policy2 import AgentOne as fPolicyAgent2
+from Agent_Team_VAR import Agent as fPolicyAgent2
 from Agent import AgentOne as fPolicyAgent1
 from Agent0 import AgentZero
 from RLAgent import AgentRL
@@ -67,11 +67,12 @@ final_results = [0, 0]
 write_headers()
 for i in progressbar.progressbar(range(1000)):
     results = []
-    agentRL = AgentRL(1, i)
-    agentZero = AgentZero(2, i)
-    fpolicyAgent1 = fPolicyAgent1(2, i)
-    fpolicyAgent2 = fPolicyAgent2(2, i)
-    [winner, final_state] = board.runGame(agentOne=agentRL, agentTwo=fpolicyAgent1)
+    agentRL = AgentRL(2, i)
+    # agentZero = AgentZero(2, i)
+    # fpolicyAgent1 = fPolicyAgent1(2, i)
+    fpolicyAgent1 = fPolicyAgent2(2)
+    fpolicyAgent2 = fPolicyAgent2(1)
+    [winner, final_state] = board.runGame(agentOne=fpolicyAgent2, agentTwo=fpolicyAgent1)
     results.append(winner)
 
     # print("Printing final state returned by run game: ")
